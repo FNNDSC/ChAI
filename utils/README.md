@@ -1,110 +1,120 @@
-# 📝 convert_adoc_to_md.py
+# 🧠 docling-batch
 
-This script clones a Git repository, finds `.adoc` (AsciiDoc) files, and converts them into `.md` (Markdown) using the [Docling](https://github.com/docling-project/docling) document parser. It's ideal for preparing content for Retrieval-Augmented Generation (RAG) pipelines.
-
----
-
-## 🔧 Requirements
-
-- Python 3.10
-- `git` installed on your system
-- Internet access to clone the Git repo
+`docling-batch` is a flexible CLI tool for batch-converting documents from folders, files, GitHub repositories (with optional subfolders), and public URLs into Markdown, text, and structured formats like JSON/YAML — using the power of [Docling](https://github.com/docling-project/docling).
 
 ---
 
-## 🚀 Setup and Usage (with `venv`)
+## 🚀 Features
 
-### 1. Clone or download this script
+Supports many input formats: `.adoc`, `.pdf`, `.docx`, `.html`, `.pptx`, `.xlsx`, `.odt`, `.rst`, etc.  
+Converts GitHub repos, local folders/files, or direct URLs  
+Outputs: `markdown`, `txt`, `json`, `html`, `yaml`, `doctags`  
+CLI-based, pip-installable, production-ready  
+
+---
+
+## 📦 Installation
+
+1. Clone or download this repo:
 
 ```bash
-git clone https://github.com/YOUR_ORG/your-repo.git
-cd your-repo/utils  # or wherever convert_adoc_to_md.py is located
+git clone https://github.com/FNNDSC/ChAI/tree/main
+cd utils
 ```
 
-### 2. Create a Python virtual environment (recommended)
+2. Install the tool locally:
 
 ```bash
-python3.10 -m venv .venv
-source .venv/bin/activate
+pip install .
 ```
 
-### 3. Install dependencies
+3. You can now run:
 
 ```bash
-pip install --upgrade pip
-pip install docling
-```
-
-### 4. Run the script
-
-```bash
-python convert_adoc_to_md.py https://github.com/FNNDSC/chili.git \
-  --file-filter "doc/**/*.adoc" \
-  --output-dir "./rag_markdown"
+docling-batch --help
 ```
 
 ---
 
-## 🗂 Output
+## 🧪 Usage Examples
 
-Converted `.md` files will be saved in the specified `--output-dir`, maintaining the original folder structure.
-
-Example output structure:
-
-```
-rag_markdown/
-├── doc/
-│   ├── intro.md
-│   └── usage.md
-```
-
----
-
-## 🛠️ CLI Options
-
-| Option          | Description                                | Default               |
-|-----------------|--------------------------------------------|------------------------|
-| `repo_url`      | Git URL of the repo to clone               | **(required)**         |
-| `--file-filter` | Glob pattern to find `.adoc` files         | `*.adoc`               |
-| `--output-dir`  | Folder where converted `.md` files go      | `converted_markdown/`  |
-
----
-
-## ✅ Example Use Case
-
-Convert only files inside the `doc/` folder of a repo:
+### 🔄 Convert a subfolder of a GitHub repo
 
 ```bash
-python convert_adoc_to_md.py https://github.com/FNNDSC/chili.git \
-  --file-filter "doc/**/*.adoc" \
-  --output-dir "./rag_markdown"
+docling-batch https://github.com/FNNDSC/chili.git:doc ./out --formats markdown txt
 ```
 
----
-
-## 🧹 Clean Up
-
-To deactivate the virtual environment:
+### 📂 Convert a local folder
 
 ```bash
-deactivate
+docling-batch ./docs ./output --formats markdown json
 ```
 
-To remove the virtual environment:
+### 📄 Convert a local file
 
 ```bash
-rm -rf .venv
+docling-batch ./example.docx ./out --formats markdown
+```
+
+### 🌐 Convert a public PDF or DOCX URL
+
+```bash
+docling-batch https://arxiv.org/pdf/2408.09869 ./out --formats txt
 ```
 
 ---
 
-## 📄 License
+## 🧾 Output Format Options
 
-MIT License
+Use the `--formats` flag to choose one or more:
+
+- `markdown` → `.md`
+- `txt` → plain text from markdown
+- `json` → structured JSON output
+- `html` → converted HTML
+- `yaml` → structured YAML format
+- `doctags` → line-level semantic tags
 
 ---
 
-## ✨ Credits
+## 🧠 Input Source Types
 
-Built with ❤️ using [Docling](https://github.com/docling-project/docling).
+| Source           | Description                                      |
+|------------------|--------------------------------------------------|
+| Local folder      | Recursively converts all supported files         |
+| Local file        | Converts a single file                           |
+| GitHub repo       | Use `https://...repo.git`                        |
+| GitHub subfolder  | Use `https://...repo.git:subfolder/path`         |
+| Public file URL   | Works with `.pdf`, `.docx`, `.html`, etc.        |
 
+---
+
+## 🧼 Clean Uninstall
+
+To remove the tool:
+
+```bash
+pip uninstall docling-batch
+```
+
+---
+
+## ⚙️ Development
+
+To update the code and reinstall:
+
+```bash
+pip install --upgrade .
+```
+
+---
+
+## 📜 License
+
+MIT License.
+
+---
+
+## 🤝 Acknowledgments
+
+Powered by [Docling](https://github.com/docling-project/docling), a universal document parser designed for AI workflows.

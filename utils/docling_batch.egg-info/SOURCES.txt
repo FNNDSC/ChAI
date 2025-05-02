@@ -1,0 +1,9 @@
+README.md
+docling_batch_convert.py
+setup.py
+docling_batch.egg-info/PKG-INFO
+docling_batch.egg-info/SOURCES.txt
+docling_batch.egg-info/dependency_links.txt
+docling_batch.egg-info/entry_points.txt
+docling_batch.egg-info/requires.txt
+docling_batch.egg-info/top_level.txt
