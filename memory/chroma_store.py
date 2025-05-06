@@ -3,7 +3,8 @@ from datetime import datetime
 
 class ChromaMemoryStore:
     def __init__(self, collection_name: str = "chat_memory"):
-        self.client = chromadb.PersistentClient(path=".chroma_store")
+        # ✅ Connect to the running ChromaDB server (must be started with `chroma run`)
+        self.client = chromadb.HttpClient(host="localhost", port=8000)
         self.collection = self.client.get_or_create_collection(name=collection_name)
 
     def append_message(self, role: str, content: str):
@@ -27,4 +28,4 @@ class ChromaMemoryStore:
         return messages
 
     def clear(self):
-        self.collection.delete(where={})  # Delete all
+        self.collection.delete(where={})  # Delete all stored messages

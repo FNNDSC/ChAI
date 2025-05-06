@@ -1,121 +1,189 @@
-# ChAI - A Natural Language Assistant for ChRIS - [WIP]
+# ChAI - A Natural Language Assistant for ChRIS 🧠 [WIP]
 
 <img width="1475" alt="chris" src="https://github.com/user-attachments/assets/4224f1a4-6d3d-4070-ba09-8a3403a1c2d3" />
 
-
-
-
 This repository sets up a local development environment for the ChAI assistant.
 
-It leverages **Ollama** as the model inference backend and **Streamlit** for the user interface.
+It uses:
 
-This guide will walk you through the setup and usage process.
+- **Ollama** for local LLM inference
+- **ChromaDB** (in HTTP server mode) for memory and document storage
+- **Streamlit** for the user interface
+- **LlamaStack** for agentic related
 
-## Prerequisites
+---
 
-Before you begin, ensure you have the following installed and configured:
+## 🔧 Prerequisites
 
-- **Python 3.11** (or a compatible version)
-- **Ollama** installed locally (refer to the [Ollama installation guide](<ollama_installation_link>))
-- **Streamlit** installed for the UI (`pip install streamlit`)
-- **LlamaStack** installed for managing models and inference (`pip install llama-stack`)
+Before getting started, ensure you have:
 
-### Install Python and Virtual Environment
+- Python **3.11**
+- [Ollama](https://ollama.com) installed locally
+- [LlamaStack](https://github.com/llama-index/llama-stack) installed
+- `streamlit` and `chromadb` installed via pip
 
-1.  **Verify Python Installation:** Ensure Python 3.11 is installed on your system. You can check the version by running:
+---
 
-    ```bash
-    python3 --version
-    ```
+## 📦 Setup Instructions
 
-2.  **Create and Activate Virtual Environment:** It's highly recommended to use a virtual environment to manage dependencies.
+### 1. Clone the Repo and Create a Virtual Environment
 
-    ```bash
-    python3.11 -m venv .chenv
-    source .chenv/bin/activate
-    ```
+```bash
+git clone https://github.com/YOUR_USERNAME/ChAI
+cd ChAI
+python3.11 -m venv .chenv
+source .chenv/bin/activate
+````
 
-### Install Dependencies
+---
 
-With the virtual environment activated, install the necessary Python packages listed in the `requirements.txt` file:
+### 2. Install Python Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-**Note:** If Ollama and LlamaStack Client are not included in your `requirements.txt`, please install them separately following their respective installation instructions.
-
-### Setting Up and Running the Application
-
-1.  **Start Ollama Model (`llama3.2:3b`):**
-
-    Initiate the Ollama model using the `llama-stack` build command:
-
-    ```bash
-    INFERENCE_MODEL=llama3.2:3b llama stack build --template ollama --image-type venv --run
-    ```
-
-2.  **Activate Virtual Environment (if needed):**
-
-    If you've closed your terminal or deactivated the environment, reactivate it:
-
-    ```bash
-    source .chenv/bin/activate
-    ```
-
-3.  **Run Streamlit Application:**
-
-    With the virtual environment active, launch the Streamlit application:
-
-    ```bash
-    streamlit run app.py
-    ```
-
-4.  **Accessing the Application:**
-
-    Once the Streamlit app is running, you will see output similar to:
-
-    ```
-    Local URL: http://localhost:8501
-    Network URL: http://<your-local-ip>:8501
-    ```
-
-    Open your web browser and navigate to the **Local URL** provided to interact with the ChAI assistant.
+> Ensure your `requirements.txt` includes:
+>
+> ```text
+> chromadb[server]
+> streamlit
+> llama-stack
+> ```
 
 ---
 
-## Commands Breakdown
+### 3. Start the ChromaDB Server Locally
 
-* **`llama stack build --template ollama --image-type venv --run`**: This command utilizes `llama-stack` to build and run an environment based on the Ollama template, specifically configured for your virtual environment.
-* **`streamlit run app.py`**: This command executes the Streamlit web application (`app.py`), which provides the user interface for interacting with the ChAI assistant.
+ChromaDB v1.x no longer supports direct Python clients. You must run the Chroma server:
 
----
+```bash
+chroma run --path .chroma_store
+```
 
-## Troubleshooting
+This starts the ChromaDB server at `http://localhost:8000` and stores data in the `.chroma_store/` folder (acts like a volume).
 
-### 1. `ImportError: ...`
-
-If you encounter import errors related to `pydantic` or other Python packages, try the following troubleshooting steps:
-
-* **Reinstall the problematic package, potentially building from source:**
-
-    ```bash
-    pip install --no-binary :all: pydantic
-    ```
-
-* **Ensure Python Environment Compatibility:** Verify that your active Python environment (`.chenv`) is compatible with the package versions specified in your `requirements.txt` file. You might need to update or downgrade packages if there are conflicts.
-
-### 2. `Permission Denied / File Access Errors`
-
-If you run into permission-related issues, ensure your user has the necessary read and write permissions for the files and directories involved. If necessary, you can attempt to modify permissions using the `chmod` command (e.g., `chmod +x <filename>`). Use `sudo` with caution, as it can have unintended consequences if not used correctly.
+Leave this terminal running.
 
 ---
 
-## Additional Notes
+### 4. Start the Ollama Model
 
-* **Ollama**: Ollama serves as the local inference server, running the `llama3.2:3b` model by default. You can experiment with different models by modifying the `INFERENCE_MODEL` environment variable before running the `llama stack build` command.
-* **Streamlit**: Streamlit provides the interactive front-end UI that displays the ChAI assistant's responses and allows you to input queries.
-* **LlamaStack Client**: While the guide mentions LlamaStack installation, the direct client usage in the provided steps isn't explicit. LlamaStack is being used behind the scenes by the `llama stack build` command to manage the model and inference setup with Ollama.
+In a new terminal tab (also inside your virtual env):
+
+```bash
+INFERENCE_MODEL=llama3.2:3b llama stack build --template ollama --image-type venv --run
+```
+
+This builds and runs the local inference container using the specified model.
 
 ---
 
+### 5. Launch the Streamlit UI
+
+In another terminal tab (still in the same `.chenv`):
+
+```bash
+streamlit run app.py
+```
+
+You’ll see something like:
+
+```
+Local URL: http://localhost:8501
+```
+
+Open this URL in your browser to interact with ChAI.
+
+---
+
+## 🧠 Architecture Overview
+
+```text
+User → Streamlit UI (app.py)
+           ↓
+      LlamaStack (Ollama)
+           ↓
+     ┌──────────────┐
+     │ ChromaDB API │ ← chroma run --path .chroma_store
+     └──────────────┘
+```
+
+* **Chat memory** and document context are stored in ChromaDB collections.
+* **LLM responses** are generated via LlamaStack → Ollama.
+* **Everything runs locally**, but is production-aligned (e.g. OpenShift-ready).
+
+---
+
+## 🛠️ Common Commands
+
+| Command                                   | Purpose                            |
+| ----------------------------------------- | ---------------------------------- |
+| `chroma run --path .chroma_store`         | Starts ChromaDB HTTP server        |
+| `llama stack build --template ollama ...` | Starts Ollama model via LlamaStack |
+| `streamlit run app.py`                    | Launches the ChAI frontend         |
+
+---
+
+## 🩺 Troubleshooting
+
+### Chroma Errors
+
+* **Error:** `PersistentClient not supported`
+
+  * **Fix:** Make sure you're running `chroma run --path .chroma_store` and using `HttpClient` in code
+
+* **Error:** `localhost:8000 refused connection`
+
+  * **Fix:** Ensure the Chroma server is running before launching the app
+
+---
+
+## 📁 File/Folder Structure
+
+```
+ChAI/
+├── app.py                  # Streamlit UI
+├── memory/
+│   └── chroma_store.py     # ChromaMemoryStore using HttpClient
+├── agents/
+│   └── chai.py             # ChAI agent logic
+├── .chroma_store/          # Auto-created persistent vector store
+├── requirements.txt
+└── README.md
+```
+
+---
+
+## 📌 Notes
+
+* The `.chroma_store/` folder is your persistent vector DB — similar to a PVC in production.
+* You can use the same architecture on OpenShift by deploying the Chroma server and mounting this folder via a PVC.
+
+---
+
+## 🚀 Future Enhancements
+
+* ✅ Add OpenShift `Deployment + PVC` YAMLs
+* ✅ Dockerize ChromaDB
+* ✅ Integrate RAG document upload in UI
+* ✅ Add `analyze` mode for input summarization
+
+---
+
+## 🧩 Credits
+
+Built using:
+
+* [ChromaDB](https://github.com/chroma-core/chroma)
+* [Ollama](https://ollama.com)
+* [LlamaStack](https://github.com/llama-index/llama-stack)
+* [Streamlit](https://streamlit.io)
+
+---
+
+## 🧪 Maintainer Tips
+
+If you're running all three services (Ollama, ChromaDB, and Streamlit), consider using `tmux`, `Makefile`, or `docker-compose` for easier orchestration.
+
+---

@@ -1,6 +1,7 @@
 streamlit
 ollama
 sentence-transformers
-chromadb==0.5.23
 llama-stack-client
 PyPDF2
+chromadb==0.4.23
+numpy==1.26.4
