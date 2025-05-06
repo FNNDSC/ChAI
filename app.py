@@ -2,7 +2,7 @@ import streamlit as st
 from ai_modules.agent_chai import ChAIAgent
 
 # Page setup
-st.set_page_config(page_title="ChAI - ChRIS Assistant", layout="wide")
+st.set_page_config(page_title=" ChAI - A Natural Language Assistant for ChRIS", layout="wide")
 
 st.markdown("""
     <style>
@@ -10,7 +10,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<div class='chat-title'>🧠 ChAI — ChRIS Medical Assistant</div>", unsafe_allow_html=True)
+st.markdown("<div class='chat-title'>🧠 ChAI — A Natural Language Assistant for ChRIS</div>", unsafe_allow_html=True)
 st.caption("Ask about ChRIS workflows, plugins, or pipelines.")
 
 # Init session state

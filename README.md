@@ -26,7 +26,7 @@ Before you begin, ensure you have the following installed and configured:
 2.  **Create and Activate Virtual Environment:** It's highly recommended to use a virtual environment to manage dependencies.
 
     ```bash
-    python3 -m venv .chenv
+    python3.11 -m venv .chenv
     source .chenv/bin/activate
     ```
 
