@@ -1,77 +1,79 @@
 import streamlit as st
-from ai_modules.agent_chai import ChAIAgent
+import json
+from pathlib import Path
+from agents.chai import ChAIAgent
+from memory.chroma_store import ChromaMemoryStore
 
-# Page setup
-st.set_page_config(page_title=" ChAI - A Natural Language Assistant for ChRIS", layout="wide")
+# ✅ Toggle between ChromaDB and JSON memory
+USE_CHROMA = True
+CHAT_HISTORY_FILE = Path(".chat_history.json")
 
-st.markdown("""
-    <style>
-    .chat-title { text-align: center; font-size: 32px; margin-bottom: 1rem; }
-    </style>
-""", unsafe_allow_html=True)
+def load_json_history():
+    if CHAT_HISTORY_FILE.exists():
+        return json.loads(CHAT_HISTORY_FILE.read_text())
+    return []
 
-st.markdown("<div class='chat-title'>🧠 ChAI — A Natural Language Assistant for ChRIS</div>", unsafe_allow_html=True)
-st.caption("Ask about ChRIS workflows, plugins, or pipelines.")
+def save_json_history(history):
+    CHAT_HISTORY_FILE.write_text(json.dumps(history, indent=2))
 
-# Init session state
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+# 🧠 Load chat history into session state
+if "chat_history" not in st.session_state:
+    if USE_CHROMA:
+        st.session_state.chat_history = ChromaMemoryStore("chat_memory").get_messages()
+    else:
+        st.session_state.chat_history = load_json_history()
 
-if "memory" not in st.session_state:
-    st.session_state.memory = []
+# ✅ Initialize agent + memory backend
+agent = ChAIAgent()
+memory_store = ChromaMemoryStore("chat_memory") if USE_CHROMA else None
 
-if "agent" not in st.session_state:
-    st.session_state.agent = ChAIAgent()
+# 🎨 UI Setup
+st.set_page_config(page_title="ChAI - ChRIS Assistant", layout="wide")
+st.title("🧠 ChAI - Your ChRIS Assistant")
 
-# Display chat history
-for msg in st.session_state.messages:
+# 🗃️ Render message history with RAG context (if any)
+for msg in st.session_state.chat_history:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
         if msg["role"] == "assistant" and msg.get("context"):
-            with st.expander("📄 Retrieved Context", expanded=False):
-                for doc in msg["context"]:
-                    source = doc["metadata"].get("source", "unknown") if isinstance(doc, dict) else getattr(doc, "metadata", {}).get("source", "unknown")
-                    content = doc.get("content", str(doc)) if isinstance(doc, dict) else getattr(doc, "content", str(doc))
-                    st.markdown(f"**Source:** `{source}`")
-                    st.markdown(f"> {content.strip()}")
-                    st.markdown("---")
+            with st.expander("📚 Show RAG Documents", expanded=False):  # Default: collapsed
+                for i, doc in enumerate(msg["context"]):
+                    preview = doc[:1000] if isinstance(doc, str) else str(doc)
+                    st.markdown(f"**Doc {i+1}:**\n```text\n{preview}\n```")
 
-# Handle input
-query = st.chat_input("What would you like to ask?")
-
-if query:
-    # Show user input
-    st.chat_message("user").markdown(query)
-
-    # Append user input to messages and memory
-    user_msg = {"role": "user", "content": query}
-    st.session_state.messages.append(user_msg)
-    st.session_state.memory.append(user_msg)
-
-    # Stream response
-    response_text = ""
-    context_docs = []
+# 💬 Chat input and streaming response
+if prompt := st.chat_input("Ask your question about ChRIS..."):
+    with st.chat_message("user"):
+        st.markdown(prompt)
+    st.session_state.chat_history.append({"role": "user", "content": prompt})
+    if USE_CHROMA:
+        memory_store.append_message("user", prompt)
 
     with st.chat_message("assistant"):
-        response_box = st.empty()
+        response_container = st.empty()
+        response = ""
+        context_block = None
 
-        for result in st.session_state.agent.ask(query, st.session_state.memory, stream=True):
-            if isinstance(result, dict) and "context" in result:
-                context_docs = result["context"]
-            elif isinstance(result, str):
-                response_text += result
-                response_box.markdown(response_text)
+        for chunk in agent.ask(prompt, memory=st.session_state.chat_history, stream=True):
+            if isinstance(chunk, dict) and "context" in chunk:
+                context_block = chunk["context"]
+                with st.expander("📚 Show RAG Documents", expanded=False):  # Default: collapsed
+                    for i, doc in enumerate(context_block):
+                        preview = doc[:1000] if isinstance(doc, str) else str(doc)
+                        st.markdown(f"**Doc {i+1}:**\n```text\n{preview}\n```")
+            else:
+                response += chunk
+                response_container.markdown(response)
 
-    # Final assistant message (without 'context' in memory)
-    assistant_msg = {
+    # 🧠 Store assistant message + context
+    st.session_state.chat_history.append({
         "role": "assistant",
-        "content": response_text,
-        "context": context_docs
-    }
-
-    st.session_state.messages.append(assistant_msg)
-    st.session_state.memory.append({
-        "role": "assistant",
-        "content": response_text.strip()
+        "content": response,
+        "context": context_block
     })
 
+    # 💾 Persist memory
+    if USE_CHROMA:
+        memory_store.append_message("assistant", response)
+    else:
+        save_json_history(st.session_state.chat_history)
