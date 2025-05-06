@@ -1,6 +1,6 @@
 # ChAI - A Natural Language Assistant for ChRIS 🧠 [WIP]
 
-<img width="1475" alt="chris" src="https://github.com/user-attachments/assets/4224f1a4-6d3d-4070-ba09-8a3403a1c2d3" />
+<img width="1475" alt="Screenshot 2025-05-06 at 8 14 12 AM" src="https://github.com/user-attachments/assets/6edf75dc-c83b-4683-a4ce-9408ec8b672a" />
 
 This repository sets up a local development environment for the ChAI assistant.
 
@@ -164,10 +164,10 @@ ChAI/
 
 ## 🚀 Future Enhancements
 
-* ✅ Add OpenShift `Deployment + PVC` YAMLs
-* ✅ Dockerize ChromaDB
-* ✅ Integrate RAG document upload in UI
-* ✅ Add `analyze` mode for input summarization
+* Add OpenShift `Deployment + PVC` YAMLs
+* Dockerize ChromaDB
+* Integrate RAG document upload in UI
+* Add `analyze` mode for input summarization
 
 ---
 
