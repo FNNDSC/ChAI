@@ -1,4 +1,4 @@
-# ChAI - A Natural Language Assistant Using ChRIS
+# ChAI - A Natural Language Assistant for ChRIS - [Work in Progress]
 
 https://github.com/user-attachments/assets/9a3ea458-5de3-4e42-a68b-f656c8e63365
 
