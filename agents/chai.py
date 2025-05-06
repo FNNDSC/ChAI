@@ -58,7 +58,7 @@ class ChAIAgent:
                 embedding_dimension=self.embedding_dim,
                 provider_id="faiss",
             )
-            logging.info(f"✅ Registered vector DB: {self.vector_db}")
+            logging.info(f" Registered vector DB: {self.vector_db}")
             return True
         logging.info(f"ℹ️ Vector DB '{self.vector_db}' already exists.")
         return False
@@ -184,7 +184,7 @@ class ChAIAgent:
             )
             logging.info(f"📦 Inserted {len(documents)} documents into '{self.vector_db}'")
 
-            # ✅ Safe check for chunk counts
+            #  Safe check for chunk counts
             if inserted and isinstance(inserted, dict) and "chunk_counts" in inserted:
                 for doc_id, chunks in inserted["chunk_counts"].items():
                     logging.info(f"🔖 {doc_id}: {chunks} chunks")

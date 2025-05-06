@@ -1,2 +1,6 @@
 streamlit
 ollama
+sentence-transformers
+chromadb==0.5.23
+llama-stack-client
+PyPDF2
