@@ -54,10 +54,10 @@ if prompt := st.chat_input("Ask your question about ChRIS..."):
         response = ""
         context_block = None
 
-        for chunk in agent.ask(prompt, memory=st.session_state.chat_history, stream=True):
+        for chunk in agent.ask(prompt, stream=True):  # ✅ Removed `memory=...`
             if isinstance(chunk, dict) and "context" in chunk:
                 context_block = chunk["context"]
-                with st.expander("📚 Show RAG Documents", expanded=False):  # Default: collapsed
+                with st.expander("📚 Show RAG Documents", expanded=False):
                     for i, doc in enumerate(context_block):
                         preview = doc[:1000] if isinstance(doc, str) else str(doc)
                         st.markdown(f"**Doc {i+1}:**\n```text\n{preview}\n```")

@@ -58,39 +58,36 @@ class ChAIAgent:
                 embedding_dimension=self.embedding_dim,
                 provider_id="faiss",
             )
-            logging.info(f" Registered vector DB: {self.vector_db}")
+            logging.info(f"✅ Registered vector DB: {self.vector_db}")
             return True
         logging.info(f"ℹ️ Vector DB '{self.vector_db}' already exists.")
         return False
 
     def _vector_db_empty(self):
-        logging.info(f"📊 Checking if vector DB '{self.vector_db}' is empty via RAG agent")
         try:
-            probe_agent = Agent(
+            agent = Agent(
                 self.client,
                 model=self.model,
-                instructions="Check if any documents exist",
+                instructions="Check for docs",
                 tools=[{
                     "name": "builtin::rag/knowledge_search",
                     "args": {"vector_db_ids": [self.vector_db], "top_k": 1}
                 }],
             )
-            session_id = probe_agent.create_session("probe-db")
-            turn = probe_agent.create_turn(
-                messages=[UserMessage(role="user", content=".....")],
-                session_id=session_id,
+            session = agent.create_session("probe")
+            turn = agent.create_turn(
+                messages=[UserMessage(role="user", content="...")],
+                session_id=session,
                 stream=False,
             )
             tool_step = next((s for s in turn.steps if s.step_type == "tool_execution"), None)
-            tool_context = tool_step.tool_responses[0].content if tool_step else ""
-            doc_list = tool_context if isinstance(tool_context, list) else []
-            return len(doc_list) == 0
+            docs = tool_step.tool_responses[0].content if tool_step else []
+            return len(docs) == 0
         except Exception as e:
-            logging.warning(f"⚠️ Failed to probe vector DB: {e}")
+            logging.warning(f"⚠️ Probe failed: {e}")
             return False
 
     def _get_existing_doc_ids(self):
-        logging.info(f"📡 Fetching existing doc IDs from vector DB '{self.vector_db}'")
         try:
             agent = Agent(
                 self.client,
@@ -101,31 +98,30 @@ class ChAIAgent:
                     "args": {"vector_db_ids": [self.vector_db], "top_k": 1000}
                 }],
             )
-            session_id = agent.create_session("fetch-docs")
+            session = agent.create_session("doc-fetch")
             turn = agent.create_turn(
                 messages=[UserMessage(role="user", content="list")],
-                session_id=session_id,
+                session_id=session,
                 stream=False,
             )
             tool_step = next((s for s in turn.steps if s.step_type == "tool_execution"), None)
             docs = tool_step.tool_responses[0].content if tool_step else []
-            ids = {doc.get("document_id") for doc in docs if isinstance(doc, dict)}
-            return ids
+            return {doc.get("document_id") for doc in docs if isinstance(doc, dict)}
         except Exception as e:
-            logging.warning(f"⚠️ Could not fetch existing document IDs: {e}")
+            logging.warning(f"⚠️ Failed to fetch docs: {e}")
             return set()
 
     def _ingest_documents(self):
         folder = self.docs_dir / self.vector_db
         if not folder.exists():
-            logging.warning(f"⚠️ Docs folder '{folder}' not found. Skipping ingestion.")
+            logging.warning(f"⚠️ Folder not found: {folder}")
             return
 
         allowed_exts = {".jsonl", ".md", ".txt", ".adoc"}
         if PdfReader:
             allowed_exts.add(".pdf")
         else:
-            logging.warning("⚠️ PyPDF2 not installed. PDF files will be skipped.")
+            logging.warning("⚠️ PDF support missing (PyPDF2)")
 
         existing_ids = self._get_existing_doc_ids()
         documents = []
@@ -183,24 +179,17 @@ class ChAIAgent:
                 chunk_size_in_tokens=512,
             )
             logging.info(f"📦 Inserted {len(documents)} documents into '{self.vector_db}'")
-
-            #  Safe check for chunk counts
-            if inserted and isinstance(inserted, dict) and "chunk_counts" in inserted:
-                for doc_id, chunks in inserted["chunk_counts"].items():
-                    logging.info(f"🔖 {doc_id}: {chunks} chunks")
-            else:
-                logging.info("ℹ️ No chunk count metadata returned from insert.")
         else:
             logging.info("ℹ️ No new documents to ingest.")
 
-    def ask(self, question: str, memory: list = None, stream: bool = False):
+    def ask(self, question: str, stream: bool = False):
         logging.info(f"🤖 Asking: {question}")
-        if memory is None:
-            memory = (
-                ChromaMemoryStore("chat_memory").get_messages()
-                if USE_CHROMA else load_json_history()
-            )
+        memory = (
+            ChromaMemoryStore("chat_memory").get_messages()
+            if USE_CHROMA else load_json_history()
+        )
 
+        # 🔍 First get context with RAG
         rag_agent = Agent(
             self.client,
             model=self.model,
@@ -210,20 +199,22 @@ class ChAIAgent:
                 "args": {"vector_db_ids": [self.vector_db], "top_k": 5}
             }],
         )
-        rag_session_id = rag_agent.create_session("rag-context")
+        rag_session = rag_agent.create_session("rag-context")
         rag_turn = rag_agent.create_turn(
             messages=[UserMessage(role="user", content=question)],
-            session_id=rag_session_id,
+            session_id=rag_session,
             stream=False,
         )
 
-        tool_step = next((s for s in rag_turn.steps if s.step_type == "tool_execution"), None)
+        steps = list(rag_turn.steps) if hasattr(rag_turn, "steps") else []
+        tool_step = next((s for s in steps if s.step_type == "tool_execution"), None)
         tool_context = tool_step.tool_responses[0].content if tool_step else ""
         context_docs = tool_context if isinstance(tool_context, list) else []
 
-        logging.info(f"📚 Retrieved {len(context_docs)} docs from RAG")
+        logging.info(f"📚 Retrieved {len(context_docs)} docs")
         yield {"context": context_docs}
 
+        # 🧠 Prepare prompt
         prompt = (
             "You are an expert assistant for the ChRIS platform.\n"
             "Use only the provided documentation context to answer the question clearly and accurately.\n\n"
@@ -232,18 +223,19 @@ class ChAIAgent:
             "Answer:"
         )
 
+        # 💬 Final answer agent
         answer_agent = Agent(
             self.client,
             model=self.model,
             instructions="Respond using retrieved context only. No assumptions.",
         )
-        session_id = answer_agent.create_session("chris-qa")
+        session = answer_agent.create_session("chris-qa")
         message_history = [UserMessage(role="user", content=m["content"]) for m in memory]
         message_history.append(UserMessage(role="user", content=prompt))
 
         turn = answer_agent.create_turn(
             messages=message_history,
-            session_id=session_id,
+            session_id=session,
             stream=stream,
         )
 
