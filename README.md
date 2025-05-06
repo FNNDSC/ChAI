@@ -1,5 +1,8 @@
 # ChAI - A Natural Language Assistant Using ChRIS
 
+https://github.com/user-attachments/assets/9a3ea458-5de3-4e42-a68b-f656c8e63365
+
+
 This repository sets up a local development environment for the ChAI assistant.
 
 It leverages **Ollama** as the model inference backend and **Streamlit** for the user interface.
