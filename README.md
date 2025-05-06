@@ -177,13 +177,12 @@ Built using:
 
 * [ChromaDB](https://github.com/chroma-core/chroma)
 * [Ollama](https://ollama.com)
-* [LlamaStack](https://github.com/llama-index/llama-stack)
+* [LlamaStack](https://llama-stack.readthedocs.io/en/latest)
 * [Streamlit](https://streamlit.io)
 
 ---
 
-## 🧪 Maintainer Tips
+## 📄 License
 
-If you're running all three services (Ollama, ChromaDB, and Streamlit), consider using `tmux`, `Makefile`, or `docker-compose` for easier orchestration.
+This project is licensed under the [MIT License](./LICENSE). You are free to use, modify, and distribute this software with proper attribution.
 
----
