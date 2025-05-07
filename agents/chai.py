@@ -7,7 +7,6 @@ from llama_stack_client.types import UserMessage
 from llama_stack_client.lib.agents.event_logger import EventLogger
 from memory.chroma_store import ChromaMemoryStore
 
-# Optional PDF support
 try:
     from PyPDF2 import PdfReader
 except ImportError:
@@ -33,8 +32,7 @@ class ChAIAgent:
         self.docs_dir = Path(docs_dir)
 
         self._setup_logging()
-        created = self._ensure_vector_db()
-        if created or self._vector_db_empty():
+        if self._ensure_vector_db() or self._vector_db_empty():
             self._ingest_documents()
 
     def _setup_logging(self):
@@ -60,7 +58,6 @@ class ChAIAgent:
             )
             logging.info(f"✅ Registered vector DB: {self.vector_db}")
             return True
-        logging.info(f"ℹ️ Vector DB '{self.vector_db}' already exists.")
         return False
 
     def _vector_db_empty(self):
@@ -68,7 +65,7 @@ class ChAIAgent:
             agent = Agent(
                 self.client,
                 model=self.model,
-                instructions="Check for docs",
+                instructions="Probe vector DB",
                 tools=[{
                     "name": "builtin::rag/knowledge_search",
                     "args": {"vector_db_ids": [self.vector_db], "top_k": 1}
@@ -80,8 +77,8 @@ class ChAIAgent:
                 session_id=session,
                 stream=False,
             )
-            tool_step = next((s for s in turn.steps if s.step_type == "tool_execution"), None)
-            docs = tool_step.tool_responses[0].content if tool_step else []
+            step = next((s for s in turn.steps if s.step_type == "tool_execution"), None)
+            docs = step.tool_responses[0].content if step else []
             return len(docs) == 0
         except Exception as e:
             logging.warning(f"⚠️ Probe failed: {e}")
@@ -92,11 +89,22 @@ class ChAIAgent:
             agent = Agent(
                 self.client,
                 model=self.model,
-                instructions="Fetch existing doc IDs",
-                tools=[{
-                    "name": "builtin::rag/knowledge_search",
-                    "args": {"vector_db_ids": [self.vector_db], "top_k": 1000}
-                }],
+                instructions=(
+                    "You are a helpful assistant. You have access to a number of tools. "
+                    "Whenever a tool is called, be sure return the Response in a friendly and helpful tone. "
+                    "When you are asked to search the web you must use a tool."
+                ),
+                tools=[
+                    "mcp::custom_tool",
+                    {
+                        "name": "builtin::rag",
+                        "args": {
+                            "vector_db_ids": ["my_documents"],
+                            "top_k": 1
+                        }
+                    }
+                ],
+                tool_config={"tool_choice": "auto"},
             )
             session = agent.create_session("doc-fetch")
             turn = agent.create_turn(
@@ -104,8 +112,8 @@ class ChAIAgent:
                 session_id=session,
                 stream=False,
             )
-            tool_step = next((s for s in turn.steps if s.step_type == "tool_execution"), None)
-            docs = tool_step.tool_responses[0].content if tool_step else []
+            step = next((s for s in turn.steps if s.step_type == "tool_execution"), None)
+            docs = step.tool_responses[0].content if step else []
             return {doc.get("document_id") for doc in docs if isinstance(doc, dict)}
         except Exception as e:
             logging.warning(f"⚠️ Failed to fetch docs: {e}")
@@ -120,8 +128,6 @@ class ChAIAgent:
         allowed_exts = {".jsonl", ".md", ".txt", ".adoc"}
         if PdfReader:
             allowed_exts.add(".pdf")
-        else:
-            logging.warning("⚠️ PDF support missing (PyPDF2)")
 
         existing_ids = self._get_existing_doc_ids()
         documents = []
@@ -167,33 +173,29 @@ class ChAIAgent:
                         mime_type="text/plain"
                     ))
 
-                logging.info(f"📄 Prepared: {file.name}")
-
             except Exception as e:
                 logging.warning(f"⚠️ Skipped {file.name}: {e}")
 
         if documents:
-            inserted = self.client.tool_runtime.rag_tool.insert(
+            self.client.tool_runtime.rag_tool.insert(
                 documents=documents,
                 vector_db_id=self.vector_db,
                 chunk_size_in_tokens=512,
             )
-            logging.info(f"📦 Inserted {len(documents)} documents into '{self.vector_db}'")
-        else:
-            logging.info("ℹ️ No new documents to ingest.")
+            logging.info(f"📦 Inserted {len(documents)} new documents")
 
-    def ask(self, question: str, stream: bool = False):
-        logging.info(f"🤖 Asking: {question}")
+    def ask(self, question: str, stream: bool = False, thread_id: str = "chat_memory"):
+        logging.info(f"🧠 Question: {question}")
         memory = (
-            ChromaMemoryStore("chat_memory").get_messages()
+            ChromaMemoryStore(thread_id).get_messages()
             if USE_CHROMA else load_json_history()
         )
 
-        # 🔍 First get context with RAG
+        # Step 1: Retrieve context
         rag_agent = Agent(
             self.client,
             model=self.model,
-            instructions="Use the RAG tool to retrieve helpful ChRIS-related context.",
+            instructions="Retrieve relevant ChRIS context using RAG.",
             tools=[{
                 "name": "builtin::rag/knowledge_search",
                 "args": {"vector_db_ids": [self.vector_db], "top_k": 5}
@@ -205,36 +207,51 @@ class ChAIAgent:
             session_id=rag_session,
             stream=False,
         )
+        step = next((s for s in rag_turn.steps if s.step_type == "tool_execution"), None)
+        context_docs = step.tool_responses[0].content if step else []
 
-        steps = list(rag_turn.steps) if hasattr(rag_turn, "steps") else []
-        tool_step = next((s for s in steps if s.step_type == "tool_execution"), None)
-        tool_context = tool_step.tool_responses[0].content if tool_step else ""
-        context_docs = tool_context if isinstance(tool_context, list) else []
+        def safe_stringify(doc):
+            if isinstance(doc, str):
+                return doc
+            try:
+                return json.dumps(doc, indent=2)
+            except Exception:
+                return str(doc)
 
-        logging.info(f"📚 Retrieved {len(context_docs)} docs")
+        context_block = "\n---\n".join(safe_stringify(d) for d in context_docs)
         yield {"context": context_docs}
 
-        # 🧠 Prepare prompt
-        prompt = (
-            "You are an expert assistant for the ChRIS platform.\n"
-            "Use only the provided documentation context to answer the question clearly and accurately.\n\n"
-            f"User Question:\n{question}\n\n"
-            f"Context:\n{tool_context}\n\n"
-            "Answer:"
-        )
-
-        # 💬 Final answer agent
+        # Step 2: Use MCP + RAG tools for answer
         answer_agent = Agent(
             self.client,
             model=self.model,
-            instructions="Respond using retrieved context only. No assumptions.",
+            instructions=(
+                "You are a helpful assistant. You have access to a number of tools. "
+                "Whenever a tool is called, be sure to return the Response in a friendly and helpful tone. "
+                "Use RAG for questions that require documentation, and MCP tools for real time queries."
+            ),
+            tools=[
+                {
+                    "name": "mcp::chris",
+                    "args": {} 
+                },
+                {
+                    "name": "builtin::rag",
+                    "args": {
+                        "vector_db_ids": ["demo"],
+                        "top_k": 1
+                    }
+                }
+            ],
+            tool_config={"tool_choice": "auto"},
         )
+
         session = answer_agent.create_session("chris-qa")
-        message_history = [UserMessage(role="user", content=m["content"]) for m in memory]
-        message_history.append(UserMessage(role="user", content=prompt))
+        history = [UserMessage(role="user", content=m["content"]) for m in memory]
+        history.append(UserMessage(role="user", content=question + "\n\n" + context_block))
 
         turn = answer_agent.create_turn(
-            messages=message_history,
+            messages=history,
             session_id=session,
             stream=stream,
         )
