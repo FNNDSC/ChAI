@@ -95,7 +95,7 @@ class ChAIAgent:
                     "When you are asked to search the web you must use a tool."
                 ),
                 tools=[
-                    "mcp::custom_tool",
+                    "mcp::chris",
                     {
                         "name": "builtin::rag",
                         "args": {
