@@ -31,7 +31,6 @@ logging.getLogger("chromadb").setLevel(logging.INFO)
 
 logger = logging.getLogger("ChAIAgent")
 
-
 USE_CHROMA = True
 CHAT_HISTORY_FILE = Path(".chat_history.json")
 
@@ -104,8 +103,8 @@ class ChAIAgent:
         self.thread_id = thread_id
 
         # Pull MCP URLs from config.yaml
-        mcp_cfg = cfg["mcp"]            # KeyError if missing
-        self.mcp_url = mcp_cfg["chris_url"].rstrip("/")  # KeyError if missing
+        mcp_cfg = cfg.get("mcp", {})
+        self.mcp_url = mcp_cfg.get("chris_url", "http://localhost:8096").rstrip("/")
         self.sse_url = f"{self.mcp_url}/sse"
         logger.debug("Using MCP server URL: %s", self.mcp_url)
 
@@ -154,7 +153,6 @@ class ChAIAgent:
 
         if "mcp::chris" not in existing:
             try:
-                # point both uri and sse_uri at the SSE endpoint
                 self.client.toolgroups.register(
                     toolgroup_id="mcp::chris",
                     provider_id="model-context-protocol",
@@ -195,17 +193,32 @@ class ChAIAgent:
 
         # Remote URLs
         for i, (url, mime) in enumerate(self.urls):
-            docs.append(RAGDocument(f"url-{i}", url, mime, {}))
+            docs.append(RAGDocument(
+                document_id=f"url-{i}",
+                content=url,
+                mime_type=mime,
+                metadata={}
+            ))
 
         # Local files
         for f in self.docs_dir.rglob("*"):
             try:
                 if f.suffix == ".pdf" and PdfReader:
                     text = "\n".join(p.extract_text() or "" for p in PdfReader(f).pages)
-                    docs.append(RAGDocument(f.name, text, "application/pdf", {"source": str(f)}))
+                    docs.append(RAGDocument(
+                        document_id=f.name,
+                        content=text,
+                        mime_type="application/pdf",
+                        metadata={"source": str(f)}
+                    ))
                 elif f.suffix in {".md", ".txt", ".adoc"}:
                     text = f.read_text(encoding="utf-8")
-                    docs.append(RAGDocument(f.name, text, "text/plain", {"source": str(f)}))
+                    docs.append(RAGDocument(
+                        document_id=f.name,
+                        content=text,
+                        mime_type="text/plain",
+                        metadata={"source": str(f)}
+                    ))
             except Exception as e:
                 logger.warning("Failed reading %s: %s", f, e)
 
@@ -225,8 +238,7 @@ class ChAIAgent:
             client=self.client,
             model=self.model,
             instructions=self.config["llama_stack"].get(
-                "instructions",
-                "You are a helpful ChRIS assistant."
+                "instructions", "You are a helpful ChRIS assistant."
             ),
             tools=[
                 {"name": "builtin::rag/knowledge_search", "args": {"vector_db_ids": [self.vector_db]}},
@@ -239,32 +251,30 @@ class ChAIAgent:
     def ask(self, prompt: str, stream: bool = False) -> dict:
         logger.debug("ask() ➞ prompt=%r, stream=%s", prompt, stream)
 
-        # 1) Load history
         raw = (
             ChromaMemoryStore(self.thread_id).get_messages()
             if USE_CHROMA else load_json_history()
         )
         logger.debug("Raw history: %s", raw)
 
-        # 2) Filter only user messages
-        history = [UserMessage(role="user", content=m["content"]) for m in raw if m.get("role") == "user"]
+        history = [
+            UserMessage(role="user", content=m["content"])
+            for m in raw if m.get("role") == "user"
+        ]
         history.append(UserMessage(role="user", content=prompt))
         logger.debug("History → %s", history)
 
-        # 3) Call the agent
         resp = self.agent.create_turn(
             messages=history,
             session_id=self.session_id,
             stream=stream
         )
 
-        # 4) Stream vs non-stream
         if stream:
             for entry in EventLogger().log(resp):
                 entry.print()
             return {}
 
-        # Non-stream: print steps & collect context
         step_printer(resp.steps)
         context = [
             item.text
