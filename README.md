@@ -1,4 +1,4 @@
-# ChAI - A Natural Language Assistant for ChRIS 🧠 [WIP]
+# ChAI - A Natural Language Assistant for ChRIS  [WIP]
 
 <img width="1508" alt="Screenshot 2025-05-08 at 12 48 17 AM" src="https://github.com/user-attachments/assets/03689fef-a69f-417d-a7bf-eecd576abffc" />
 
