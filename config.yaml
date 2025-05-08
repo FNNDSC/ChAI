@@ -1,0 +1,22 @@
+llama_stack:
+  base_url: "http://localhost:8321"
+  model: "llama3.2:3b"
+  instructions: "You are a helpful clinical agent for the ChRIS platform."
+
+vector_db:
+  id: "demo"
+  embedding_model: "all-MiniLM-L6-v2"
+  embedding_dimension: 384
+  provider_id: "faiss"
+  chunk_size: 300
+
+ingestion:
+  local_docs_dir: "docs"
+  remote_urls:
+    - ["https://docs.redhat.com/en/documentation/openshift_container_platform/4.11/html/support/troubleshooting#troubleshooting-installations.html", "application/html"]
+
+mcp:
+  chris_url: "http://localhost:8096"
+
+logging:
+  level: INFO

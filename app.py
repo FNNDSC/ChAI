@@ -107,41 +107,41 @@ for msg in st.session_state.chat_history:
         if msg["role"] == "assistant" and msg.get("context"):
             with st.expander("📚 Show RAG Documents", expanded=False):
                 for i, doc in enumerate(msg["context"]):
-                    preview = doc[:1000] if isinstance(doc, str) else str(doc)
+                    preview = doc[:1000] if isinstance(doc, str) else str(doc)[:1000]
                     st.markdown(f"**Doc {i+1}:**\n```text\n{preview}\n```")
 
 # 💡 Chat input
 if prompt := st.chat_input("Ask your question about ChRIS..."):
+    # show the user's message
     with st.chat_message("user"):
         st.markdown(prompt)
 
+    # save to history & memory
     st.session_state.chat_history.append({"role": "user", "content": prompt})
     if USE_CHROMA:
         memory_store.append_message("user", prompt)
 
+    # get the assistant's answer + context
     with st.chat_message("assistant"):
-        response_container = st.empty()
-        response = ""
-        context_block = None
+        result = agent.ask(prompt)  # returns {"content":..., "context":[...]}
 
-        for chunk in agent.ask(prompt, stream=True):
-            if isinstance(chunk, dict) and "context" in chunk:
-                context_block = chunk["context"]
-                with st.expander("📚 Show RAG Documents", expanded=False):
-                    for i, doc in enumerate(context_block):
-                        preview = doc[:1000] if isinstance(doc, str) else str(doc)
-                        st.markdown(f"**Doc {i+1}:**\n```text\n{preview}\n```")
-            else:
-                response += chunk
-                response_container.markdown(response)
+        # 1) render final answer
+        st.markdown(result["content"])
 
+        # 2) render context in expander if any
+        if result["context"]:
+            with st.expander("📚 Show RAG Documents", expanded=False):
+                for i, chunk in enumerate(result["context"]):
+                    preview = chunk[:1000]
+                    st.markdown(f"**Doc {i+1}:**\n```text\n{preview}\n```")
+
+    # append assistant to history & memory
     st.session_state.chat_history.append({
         "role": "assistant",
-        "content": response,
-        "context": context_block
+        "content": result["content"],
+        "context": result["context"]
     })
-
     if USE_CHROMA:
-        memory_store.append_message("assistant", response)
+        memory_store.append_message("assistant", result["content"])
     else:
         save_json_history(st.session_state.chat_history)
