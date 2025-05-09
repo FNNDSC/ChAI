@@ -13,7 +13,7 @@ vector_db:
 ingestion:
   local_docs_dir: "docs"
   remote_urls:
-    - ["https://docs.redhat.com/en/documentation/openshift_container_platform/4.11/html/support/troubleshooting#troubleshooting-installations.html", "application/html"]
+    - []
 
 mcp:
   chris_url: "http://localhost:8096"

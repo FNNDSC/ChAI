@@ -128,8 +128,8 @@ class ChAIAgent:
         # Ingestion settings
         ing = cfg["ingestion"]
         self.docs_dir = Path(ing["local_docs_dir"])
-        self.urls = ing.get("remote_urls", [])
-        logger.debug("Ingest: docs_dir=%s, remote_urls=%s", self.docs_dir, self.urls)
+        # self.urls = ing.get("remote_urls", [])
+        logger.debug("Ingest: docs_dir=%s", self.docs_dir)
 
         # Register toolgroups & ingest docs
         self._register_toolgroups()
@@ -191,15 +191,6 @@ class ChAIAgent:
         logger.info("Ingesting docs into VectorDB `%s`", self.vector_db)
         docs: List[RAGDocument] = []
 
-        # Remote URLs
-        for i, (url, mime) in enumerate(self.urls):
-            docs.append(RAGDocument(
-                document_id=f"url-{i}",
-                content=url,
-                mime_type=mime,
-                metadata={}
-            ))
-
         # Local files
         for f in self.docs_dir.rglob("*"):
             try:
@@ -237,16 +228,21 @@ class ChAIAgent:
         return Agent(
             client=self.client,
             model=self.model,
-            instructions=self.config["llama_stack"].get(
-                "instructions", "You are a helpful ChRIS assistant."
-            ),
+            instructions=self.config["llama_stack"]["instructions"],
             tools=[
-                {"name": "builtin::rag/knowledge_search", "args": {"vector_db_ids": [self.vector_db]}},
-                "mcp::chris"
+                dict(
+                    name="builtin::rag/knowledge_search",
+                    args={"vector_db_ids": [self.vector_db]},
+                ),
+                "mcp::chris",
             ],
             tool_config={"tool_choice": "auto"},
-            sampling_params={"max_tokens": 4096}
+            sampling_params={
+                "max_tokens": 4096,
+                "strategy": {"type": "greedy"},
+            },
         )
+
 
     def ask(self, prompt: str, stream: bool = False) -> dict:
         logger.debug("ask() ➞ prompt=%r, stream=%s", prompt, stream)

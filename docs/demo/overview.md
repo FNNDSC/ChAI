@@ -1,9 +1,0 @@
-## ChRIS (ChRIS Research Integration Service) Overview
-
-ChRIS is an **opensource distributed software platform** engineered to manage and coordinate computation and data across diverse computing environments. Initially developed for medical image analysis at Boston Children's Hospital, ChRIS has matured into a **general-purpose compute/data platform**. This evolution enables seamless deployment of analyses on a heterogeneous mix of resources, ranging from individual laptops to interconnected workstations, high-performance computing (HPC) clusters, and public cloud infrastructures.
-
-At its core, ChRIS is designed to handle the execution and data requirements of a specific category of computational applications frequently employed in research settings, particularly within medical image research. These applications are characterized by their **non-interactive nature** once initiated, reliance on **command-line arguments** for runtime specifications, and the collection of all output in **files**.
-
-While ChRIS provides a **web-based user interface**, the actual computations are performed by **containerized, Linux-based applications**. These background processes are termed **plugins** within the ChRIS ecosystem, as they seamlessly integrate with the ChRIS backend and are accessible through various frontends.
-
-The ChRIS architecture consists of a suite of **REST-based web services**, backend web applications, and various client-facing web frontends. The system's primary objective is to **simplify the process for developers to deploy their applications across any computing environment capable of running Linux containers**. By adhering to a standardized command-line specification for ChRIS applications, the platform facilitates effortless containerization, execution, result collection, data visualization, and collaborative sharing of research software.
