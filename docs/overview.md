@@ -8,6 +8,7 @@ type: documentation
 
 
 # ChRIS Platform Overview
+ChRIS stands for ChRIS Research Integration Service, It is an open-source, distributed platform built to manage computation and data across diverse environments.
 
 **ChRIS** (ChRIS Research Integration Service) is an open-source, distributed platform built to manage computation and data across diverse environments.
 
