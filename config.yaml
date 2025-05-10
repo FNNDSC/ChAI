@@ -12,8 +12,6 @@ vector_db:
 
 ingestion:
   local_docs_dir: "docs"
-  remote_urls:
-    - []
 
 mcp:
   chris_url: "http://localhost:8096"

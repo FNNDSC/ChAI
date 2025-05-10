@@ -128,7 +128,6 @@ class ChAIAgent:
         # Ingestion settings
         ing = cfg["ingestion"]
         self.docs_dir = Path(ing["local_docs_dir"])
-        # self.urls = ing.get("remote_urls", [])
         logger.debug("Ingest: docs_dir=%s", self.docs_dir)
 
         # Register toolgroups & ingest docs
@@ -164,7 +163,6 @@ class ChAIAgent:
         else:
             logger.info("Toolgroup mcp::chris already present")
 
-        # List & log the individual tools by identifier
         try:
             tools = self.client.tools.list(toolgroup_id="mcp::chris")
             tool_ids = [t.identifier for t in tools]
@@ -243,25 +241,17 @@ class ChAIAgent:
             },
         )
 
-
     def ask(self, prompt: str, stream: bool = False) -> dict:
         logger.debug("ask() ➞ prompt=%r, stream=%s", prompt, stream)
 
-        raw = (
-            ChromaMemoryStore(self.thread_id).get_messages()
-            if USE_CHROMA else load_json_history()
-        )
-        logger.debug("Raw history: %s", raw)
-
-        history = [
-            UserMessage(role="user", content=m["content"])
-            for m in raw if m.get("role") == "user"
+        # Only send the current user prompt (agent's `instructions` is applied internally)
+        messages = [
+            UserMessage(role="user", content=prompt),
         ]
-        history.append(UserMessage(role="user", content=prompt))
-        logger.debug("History → %s", history)
+        logger.debug("Messages being sent → %s", messages)
 
         resp = self.agent.create_turn(
-            messages=history,
+            messages=messages,
             session_id=self.session_id,
             stream=stream
         )
