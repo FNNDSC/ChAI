@@ -1,6 +1,7 @@
 # LLD Analysis Workflow in ChRIS
 The Leg Length Discrepancy (LLD) analysis is one of the most frequently used workflows in ChRIS. This process transforms leg X-rays from DICOM files into new DICOM files containing detailed measurements of the tibia and femur for both legs.
 
+
 ## Input and Output
 
 - **Input**: Leg X-rays in DICOM format

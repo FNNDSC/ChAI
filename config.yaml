@@ -1,20 +1,25 @@
+vector_db:
+  id: john_doe_context
+  embedding_model: all-MiniLM-L6-v2
+  embedding_dimension: 384
+  chunk_size: 512
+  provider_id: faiss
+
+
 llama_stack:
   base_url: "http://localhost:8321"
   model: "llama3.2:3b"
-  instructions: "You are a helpful clinical agent for the ChRIS platform."
-
-vector_db:
-  id: "demo"
-  embedding_model: "all-MiniLM-L6-v2"
-  embedding_dimension: 384
-  provider_id: "faiss"
-  chunk_size: 300
+  instructions: >
+    You are a helpful ChRIS assistant.
 
 ingestion:
   local_docs_dir: "docs"
 
-mcp:
-  chris_url: "http://localhost:8096"
-
 logging:
   level: INFO
+  log_dir: "logs"
+  file: "agentic_model.log"
+  app_log: "app.log"
+
+mcp:
+  chris_url: "http://localhost:8096"
