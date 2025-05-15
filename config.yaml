@@ -1,19 +1,36 @@
 vector_db:
-  id: john_doe_context
+  id: chris
   embedding_model: all-MiniLM-L6-v2
   embedding_dimension: 384
   chunk_size: 512
   provider_id: faiss
 
 
-llama_stack:
-  base_url: "http://localhost:8321"
-  model: "llama3.2:3b"
-  instructions: >
-    You are a helpful ChRIS assistant.
-
 ingestion:
   local_docs_dir: "docs"
+
+llama_stack:
+  base_url: "http://localhost:8321"
+  model: "llama32-3b"
+  instructions: |
+    You are a medical image analysis assistant that integrates with ChRIS.
+    You can use tools such as `knowledge_search`.
+
+    When the `knowledge_search` tool is called:
+    - Wait for its results (a list of text chunks).
+    - All results will appear between `[BEGIN]` and `[END]` markers.
+    - DO NOT echo or repeat the raw content.
+    - Instead, **summarize** the patient profile in your own words.
+    - Use clear, professional language in bullet points or concise paragraphs.
+    - If the query was about a specific topic (e.g., "femur measurements", "LLD summary", or "imaging findings"), extract only that information.
+    - End with a one-line interpretation if possible.
+
+    ❌ Never output filler like \n\n\n or redundant text.
+    ❌ Never repeat phrases like "accepted a new SeriesInstanceUID".
+    ❌ Do not generate output longer than 400 words.
+    ✅ If no useful information is found, reply: “No information available on this.”
+
+
 
 logging:
   level: INFO
@@ -22,4 +39,4 @@ logging:
   app_log: "app.log"
 
 mcp:
-  chris_url: "http://localhost:8096"
+  chris_url: "http://host.containers.internal:8096"

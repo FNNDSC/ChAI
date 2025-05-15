@@ -1,4 +1,15 @@
 # Patient Profile: John Doe
+John Doe is a patient
+
+---
+
+## 🧾 Clinical Summary
+
+This document is a structured clinical profile of the patient **John Doe**, a 26-year-old male.  
+It summarizes his demographics, presenting symptoms, clinical observations, medical history, and diagnostic plans.  
+The purpose of this profile is to support clinical decision-making through AI-assisted retrieval and summarization.
+
+For queries such as *"Tell me about the patient John Doe"*, this summary provides a comprehensive overview of his case.
 
 ---
 

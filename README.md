@@ -68,6 +68,28 @@ Leave this terminal running.
 
 ---
 
+####
+
+```
+
+podman run \
+  --privileged \                                        
+  -it \                                                 
+  -p 8321:8321 \                                         
+  -v ~/.llama/distributions/remote-vllm-milvus/remote-vllm-milvus-run.yaml:/app/config.yaml \ 
+                                                        # Mount YAML config into container
+  -v /Users/raghurambanda/llama-stack:/app/llama-stack-source \ 
+                                                        # Mount local llama-stack source code
+  localhost/remote-vllm-milvus:0.1.9 \                   # Image name and tag
+  --yaml-config /app/config.yaml \                      # Path to config file inside container
+  --env INFERENCE_MODEL=llama32-3b \                     # Model to use (environment-style argument)
+  --env VLLM_URL=https://llama32-3b-llama-serve.apps.ocp-beta-test.nerc.mghpcc.org/v1  # URL for VLLM backend
+
+
+
+```
+
+
 ### 4. Start the Ollama Model
 
 In a new terminal tab (also inside your virtual env):
